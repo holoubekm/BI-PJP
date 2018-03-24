@@ -1,0 +1,143 @@
+# This file provides the language dependent support in the main Makefile.
+# Each language makefile fragment must provide the following targets:
+#
+# foo.all.cross, foo.start.encap, foo.rest.encap,
+# foo.install-common, foo.install-man, foo.install-info, foo.install-pdf,
+# foo.info, foo.dvi, foo.pdf, foo.html, foo.uninstall,
+# foo.mostlyclean, foo.clean, foo.distclean,
+# foo.maintainer-clean, foo.stage1, foo.stage2, foo.stage3, foo.stage4
+#
+# where `foo' is the name of the language.
+
+joke: joke1$(exeext) gjoke$(exeext)
+
+.PHONY: joke
+
+CFLAGS-joke/gjoke.o += $(DRIVER_DEFINES)
+
+GCCJOKE_OBJS = $(GCC_OBJS) joke/gjoke.o
+
+gjoke$(exeext): $(GCCJOKE_OBJS) $(EXTRA_GCC_OBJS) libcommon-target.a $(LIBDEPS)
+	+$(LINKER) $(ALL_LINKERFLAGS) $(LDFLAGS) -o $@ \
+	  $(GCCJOKE_OBJS) $(EXTRA_GCC_OBJS) libcommon-target.a \
+	  $(EXTRA_GCC_LIBS) $(LIBS)
+
+FRONTEND_CPP_FILES := $(wildcard $(srcdir)/joke/frontend/*.cpp)
+FRONTEND_OBJ_FILES := $(addprefix joke/frontend/,$(notdir $(FRONTEND_CPP_FILES:.cpp=.o)))
+
+FRONTEND_DECL_CPP_FILES := $(wildcard $(srcdir)/joke/frontend/decl/*.cpp)
+FRONTEND_DECL_OBJ_FILES := $(addprefix joke/frontend/decl/,$(notdir $(FRONTEND_DECL_CPP_FILES:.cpp=.o)))
+
+FRONTEND_EXPR_CPP_FILES := $(wildcard $(srcdir)/joke/frontend/expr/*.cpp)
+FRONTEND_EXPR_OBJ_FILES := $(addprefix joke/frontend/expr/,$(notdir $(FRONTEND_EXPR_CPP_FILES:.cpp=.o)))
+
+FRONTEND_STMT_CPP_FILES := $(wildcard $(srcdir)/joke/frontend/stmt/*.cpp)
+FRONTEND_STMT_OBJ_FILES := $(addprefix joke/frontend/stmt/,$(notdir $(FRONTEND_STMT_CPP_FILES:.cpp=.o)))
+
+PARSER_CPP_FILES := $(wildcard $(srcdir)/joke/parser/*.cpp)
+PARSER_OBJ_FILES := $(addprefix joke/parser/,$(notdir $(PARSER_CPP_FILES:.cpp=.o)))
+
+JOKE_OBJS = joke/joke1.o joke/joke-lang.o $(FRONTEND_OBJ_FILES) $(FRONTEND_DECL_OBJ_FILES) $(FRONTEND_EXPR_OBJ_FILES) $(FRONTEND_STMT_OBJ_FILES) $(PARSER_OBJ_FILES)
+
+# core compiler joke1
+joke1$(exeext): $(JOKE_OBJS) attribs.o $(BACKEND) $(LIBDEPS)
+	+$(LLINKER) $(ALL_LINKERFLAGS) $(LDFLAGS) -o $@ \
+	   $(JOKE_OBJS) attribs.o $(BACKEND) $(LIBS) $(BACKENDLIBS)
+
+joke/joke1.o: joke/joke1.c $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) \
+  $(FLAGS_H) toplev.h $(GGC_H) $(TREE_H) $(DIAGNOSTIC_H) \
+  input.h options.h opts.h insn-modes.h \
+  joke/joke-lang.h gtype-joke.h gcov-iov.h gt-joke-joke1.h
+
+joke/joke-lang.o: $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) \
+  $(FLAGS_H) toplev.h $(GGC_H) $(TREE_H) $(DIAGNOSTIC_H) \
+  input.h options.h opts.h insn-modes.h
+
+joke/gjoke.o: joke/gjoke.c $(CONFIG_H) $(SYSTEM_H) \
+  coretypes.h $(DIAGNOSTIC_H) $(TREE_H) $(FLAGS_H) toplev.h langhooks.h $(TM_H)
+
+JOKEINCLUDES = -I $(srcdir)/joke
+
+joke/frontend/.deps:
+	mkdir -p joke/frontend/.deps
+
+joke/frontend/decl/.deps: joke/frontend/.deps
+	mkdir -p joke/frontend/decl/.deps
+
+joke/frontend/expr/.deps: joke/frontend/.deps
+	mkdir -p joke/frontend/expr/.deps
+
+joke/frontend/stmt/.deps: joke/frontend/.deps
+	mkdir -p joke/frontend/stmt/.deps
+
+joke/parser/.deps:
+	mkdir -p joke/parser/.deps
+
+# joke/my.o: joke/my.cpp $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) \
+#   $(FLAGS_H) toplev.h $(GGC_H) $(TREE_H) $(DIAGNOSTIC_H) \
+#   input.h options.h opts.h insn-modes.h \
+#   | joke/frontend/.deps joke/frontend/decl/.deps joke/frontend/expr/.deps joke/frontend/stmt/.deps
+# 	$(COMPILE) $(JOKEINCLUDES) $<
+# 	$(POSTCOMPILE)
+
+joke/frontend/%.o: joke/frontend/%.cpp $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) \
+  $(FLAGS_H) toplev.h $(GGC_H) $(TREE_H) $(DIAGNOSTIC_H) \
+  input.h options.h opts.h insn-modes.h \
+  | joke/frontend/.deps joke/frontend/decl/.deps joke/frontend/expr/.deps joke/frontend/stmt/.deps
+	$(COMPILE) $(JOKEINCLUDES) -frtti $<
+	$(POSTCOMPILE)
+
+joke/parser/%.o: joke/parser/%.cpp $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) \
+  $(FLAGS_H) toplev.h $(GGC_H) $(TREE_H) $(DIAGNOSTIC_H) \
+  input.h options.h opts.h insn-modes.h \
+  | joke/parser/.deps
+	$(COMPILE) $(JOKEINCLUDES) $<
+	$(POSTCOMPILE)
+
+joke.srcextra:
+
+joke.all.cross:
+
+joke.start.encap:
+joke.rest.encap:
+joke.man:
+joke.srcman:
+
+joke.tags: force
+	cd $(srcdir)/joke;\
+	etags -o TAGS.sub *.y *.l *.c *.h; frontend/*.h frontend/*.cpp \
+	etags --include TAGS.sub --include ../TAGS.sub
+joke.info:
+joke.srcinfo:
+joke.dvi:
+joke.pdf:
+doc/joke.info:
+doc/joke.dvi:
+doc/joke.pdf:
+joke.html:
+
+.phony:joke.install.common
+.phony:joke.install
+
+joke.install-common:
+joke.install-info:
+joke.install-pdf:
+joke.install-man:
+
+# Stage hooks:
+# The main makefile has already created stage?/joke.
+
+joke.stage1: stage1-start
+	-mv joke/*$(objext) stage1/joke
+joke.stage2: stage2-start
+	-mv joke/*$(objext) stage2/joke
+joke.stage3: stage3-start
+	-mv joke/*$(objext) stage3/joke
+joke.stage4: stage4-start
+	-mv joke/*$(objext) stage4/joke
+joke.stageprofile: stageprofile-start
+	-mv joke/*$(objext) stageprofile/joke
+joke.stagefeedback: stagefeedback-start
+	-mv joke/*$(objext) stagefeedback/joke
+
+config.status: joke/config-lang.in
